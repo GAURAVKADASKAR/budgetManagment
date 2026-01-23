@@ -7,6 +7,7 @@ from rest_framework import status
 from home.helperServices import *
 from home.models import *
 from home.serilaizers import *
+from django.utils import timezone
 
 
 # Service to Register employee
@@ -22,8 +23,8 @@ class employeeRegistration(APIView):
         serializer = UserSerializer(data=data)
         if not serializer.is_valid():
             return Response({'status':status.HTTP_400_BAD_REQUEST,'error':serializer.errors})
-        serializer.save()
-        token = generate_token(data['email'],data['role'])
+        user=serializer.save()
+        token = generate_token(data['email'],data['role'],user.userId)
         send_verification_mail(data['email'],token)
         return Response({"status":status.HTTP_200_OK,'message':'A verification email is sent to your address please verify yourself'})
 
@@ -41,8 +42,8 @@ class managerRegistration(APIView):
         serializer = UserSerializer(data=data)
         if not serializer.is_valid():
             return Response({'status':status.HTTP_400_BAD_REQUEST,'error':serializer.errors})
-        serializer.save()
-        token = generate_token(data['email'],data['role'])
+        user = serializer.save()
+        token = generate_token(data['email'],data['role'],user.userId)
         send_verification_mail(data['email'],token)
         return Response({"status":status.HTTP_200_OK,'message':'A verification email is sent to your address please verify yourself'})
 
@@ -72,10 +73,207 @@ class loginUser(APIView):
         hashPassword = generate_hash_password(password)
         try:
             obj = User.objects.get(email=email,password=hashPassword)
-            token = generate_token(obj.email,obj.role)
+            token = generate_token(obj.email,obj.role,obj.userId)
         except User.DoesNotExist:
             return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':'Invalid username or password'})
         return Response({'status':status.HTTP_200_OK,'message':'success','data':{'token':token,'role':obj.role}})
+
+# Service to create Budget
+class createBudget(APIView):
+    def post(self,request):
+        data = request.data
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        if response['data']['role']=="Manager":
+            userId = response['data']['userId']
+            data['createdByUser'] = userId
+            serializer = BudgetSerializer(data=data)
+            if not serializer.is_valid():
+                return Response({"status":status.HTTP_400_BAD_REQUEST,'error':serializer.errors})
+            serializer.save()
+            return Response({'status':status.HTTP_200_OK,'message':'success'})
+        return Response({'status':status.HTTP_401_UNAUTHORIZED,'message':'Invalid permission'})
+    
+# Service to List all budget
+class getBudget(APIView):
+    def get(self,request):
+        budgetId = request.GET.get("budgetId")
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        if budgetId:
+            budget = Budget.objects.filter(budgetId=budgetId,endDate__isnull=True,status="Active")
+        else:
+            budget = Budget.objects.filter(endDate__isnull=True,status="Active")
+        serializer = BudgetSerializer(budget,many=True)
+        return Response({'status':status.HTTP_200_OK,'message':'success','data':serializer.data})
+
+# service to update Budget
+class updateBudget(APIView):
+    def patch(self,request,budgetId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        if response['data']['role']=="Manager":
+            userId = response['data']['userId']
+            try:
+                budget = Budget.objects.get(budgetId=budgetId,createdByUser=userId)
+            except Budget.DoesNotExist:
+                return Response({'status':status.HTTP_404_NOT_FOUND,'error':'Invalid Budget ID or you did not create this budget'})
+            serializer = BudgetSerializer(budget,data=request.data,partial=True)
+            if not serializer.is_valid():
+                return Response({'status':status.HTTP_400_BAD_REQUEST,'error':serializer.errors})
+            serializer.save()
+            return Response({'status':status.HTTP_200_OK,'message':'success'})
+        else:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':'Invalid Permission'})
+    
+# Service to delete budget
+class deleteBudget(APIView):
+    def patch(self,request,budgetId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        if response['data']['role']=="Manager":
+            userId = response['data']['userId']
+            try:
+                budget = Budget.objects.get(budgetId=budgetId,createdByUser=userId)
+            except Budget.DoesNotExist:
+                return Response({'status':status.HTTP_404_NOT_FOUND,'error':'Invalid Budget ID or you did not create this budget'})
+            budget.endDate = timezone.now()
+            budget.status="Closed"
+            budget.save()
+            return Response({'status':status.HTTP_200_OK,'message':'success'})
+        else:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':'Invalid Permission'})
+
+# Service to create Expense
+class CreateExpense(APIView):
+    def post(self,request):
+        data = request.data.copy()
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
+        assignedManager = data.pop('assignedManager')
+        data['submittedByUserId']=userId
+        expenseSerailzer = ExpenseSerializer(data=data)
+        if not expenseSerailzer.is_valid():
+            return Response({'status':status.HTTP_400_BAD_REQUEST,'error':expenseSerailzer.errors})
+        expense=expenseSerailzer.save()
+        expenseApproval = {
+            'expenseId': expense.expenseId,
+            'assignedUser': assignedManager
+        }
+        expenseApprovalSerializer = ExpenseApprovalSerializer(data=expenseApproval)
+        if not expenseApprovalSerializer.is_valid():
+            return Response({'status':status.HTTP_400_BAD_REQUEST,'error':expenseApprovalSerializer.errors})
+        expenseApprovalSerializer.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+# Service to update Expense 
+class updateExpense(APIView):
+    def patch(self,request,expenseId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
+        try:
+            expense = Expense.objects.get(expenseId=expenseId,submittedByUserId=userId)
+        except Expense.DoesNotExist:
+            return Response({'status':status.HTTP_404_NOT_FOUND,'error':'Invalid expense ID or you did not create this expense'})
+        serializer = ExpenseSerializer(expense,data=request.data,partial=True)
+        if not serializer.is_valid():
+            return Response({'status':status.HTTP_400_BAD_REQUEST,'error':serializer.errors})
+        serializer.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+# Service to delete Expense
+class deleteExpense(APIView):
+    def patch(self,request,expenseId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
+        try:
+            expense = Expense.objects.get(expenseId=expenseId,submittedByUserId=userId,endDate__isnull=True)
+        except Expense.DoesNotExist:
+            return Response({'status':status.HTTP_404_NOT_FOUND,'message':'Invalid expense ID or you did not create this expense'})
+        expense.endDate=timezone.now()
+        expense.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+# Service to get exppenses
+class getExpense(APIView):
+    def get(self,request):
+        expenseId = request.GET.get("expenseId")
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        if expenseId:
+            expense = Expense.objects.filter(expenseId=expenseId,endDate__isnull=True)
+        else:
+            expense = Expense.objects.filter(endDate__isnull=True)
+        serializer = ExpenseSerializer(expense,many=True)
+        return Response({'status':status.HTTP_200_OK,'message':'success','data':serializer.data})
+
+
+# Service to approve expense
+class approveExpense(APIView):
+    def patch(self,request,expenseId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        userId = response['data']['userId']
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        try:
+            expense = ExpenseApproval.objects.get(expenseId=expenseId,assignedUser=userId)
+        except ExpenseApproval.DoesNotExist:
+            return Response({'status':status.HTTP_404_NOT_FOUND,'message':'Unable to find expense'})
+        expenseObj = Expense.objects.get(expenseId=expenseId)
+        expenseObj.status="Approved"
+        expenseObj.endDate = timezone.now()
+        expenseObj.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+# Service to Reject expense
+class rejectExpense(APIView):
+    def patch(self,request,expenseId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        userId = response['data']['userId']
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        try:
+            expense = ExpenseApproval.objects.get(expenseId=expenseId,assignedUser=userId)
+        except ExpenseApproval.DoesNotExist:
+            return Response({'status':status.HTTP_404_NOT_FOUND,'message':'Unable to find expense'})
+        expenseObj = Expense.objects.get(expenseId=expenseId)
+        expenseObj.status="Rejected"
+        expenseObj.endDate = timezone.now()
+        expenseObj.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+
+        
+
+    
+
+
+
+
+
+        
+
 
 
     

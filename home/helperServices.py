@@ -27,11 +27,12 @@ def send_verification_mail(email,token):
     
 
 # Function to generate token
-def generate_token(email,role):
+def generate_token(email,role,userId):
         payload = {
         "email" : email,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=600),
-        "role":role
+        "role":role,
+        "userId":userId
         }
         token = jwt.encode(payload,settings.SECRET_KEY,algorithm='HS256')
         return token

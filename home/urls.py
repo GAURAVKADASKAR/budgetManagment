@@ -22,5 +22,14 @@ urlpatterns = [
     path('employee/register/',employeeRegistration.as_view()),
     path('manager/register/',managerRegistration.as_view()),
     path('verify/',verifyUser),
-    path('login/',loginUser.as_view())
+    path('login/',loginUser.as_view()),
+    path('createBudget/',createBudget.as_view()),
+    path('GetAllBudget/',getBudget.as_view()),
+    path('updateBudget/<int:budgetId>/',updateBudget.as_view()),
+    path('deleteBudget/<int:budgetId>/',deleteBudget.as_view()),
+    path('CreateExpense/',CreateExpense.as_view()),
+    path('updateExpense/<int:expenseId>/',updateExpense.as_view()),
+    path('getExpense/',getExpense.as_view()),
+    path('approveExpense/<int:expenseId>/',approveExpense.as_view()),
+    path('rejectExpense/<int:expenseId>/',rejectExpense.as_view())
 ]

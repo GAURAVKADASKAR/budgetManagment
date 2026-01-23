@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.utils import timezone
 # Create your models here.
 
 # Model to store Department
@@ -35,4 +35,58 @@ class User(models.Model):
 
     def __str__(self):
         return self.email
+
+# Model for Budget
+class Budget(models.Model):
+    status_choices = [
+        ('Active','Active'),
+        ('Closed','Closed')
+    ]
+    budgetId = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=50)
+    Department = models.ForeignKey(Department,on_delete=models.PROTECT)
+    amountAllocated = models.PositiveIntegerField()
+    startDate = models.DateTimeField(auto_now_add=True)
+    endDate = models.DateTimeField(blank=True,null=True)
+    status = models.CharField(choices=status_choices,default='Active')
+    createdByUser = models.ForeignKey(User,related_name="user",on_delete=models.PROTECT)
+
+    def __str__(self):
+        return self.title
+
+# Model for Expense
+class Expense(models.Model):
+    expense_status = [
+        ('Pending','Pending'),
+        ('Approved','Approved'),
+        ('Rejected','Rejected')
+    ]
+    expenseId = models.AutoField(primary_key=True)
+    relatedBudgetId = models.ForeignKey(Budget,on_delete=models.PROTECT)
+    description = models.CharField(max_length=100)
+    amount = models.PositiveIntegerField()
+    submittedByUserId = models.ForeignKey(User,on_delete=models.PROTECT)
+    submittedDate = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=10,choices=expense_status,default='Pending')
+    updateDate = models.DateTimeField(auto_now=True)
+    startDate = models.DateTimeField(auto_now_add=True,null=True,blank=True)
+    endDate = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return self.description
+
+# Model for ExpenseApproval
+class ExpenseApproval(models.Model):
+    expenseApprovalId = models.AutoField(primary_key=True)
+    expenseId = models.ForeignKey(Expense,on_delete=models.CASCADE)
+    assignedUser = models.ForeignKey(User,on_delete=models.PROTECT)
+    startDate = models.DateTimeField(auto_now_add=True)
+    endDate = models.DateTimeField(null=True,blank=True)
+
+
+
+
+
+
+
 
