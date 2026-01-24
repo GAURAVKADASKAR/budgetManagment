@@ -33,5 +33,6 @@ urlpatterns = [
     path('approveExpense/<int:expenseId>/',approveExpense.as_view()),
     path('rejectExpense/<int:expenseId>/',rejectExpense.as_view()),
     path('getnotification/',getnotification.as_view()),
-    path('markNotificationAsRead/<int:notificationId>/',markNotificationAsRead.as_view())
+    path('markNotificationAsRead/<int:notificationId>/',markNotificationAsRead.as_view()),
+    path('budgetUtilizationReport/<int:budgetId>/',budgetUtilizationReport.as_view())
 ]

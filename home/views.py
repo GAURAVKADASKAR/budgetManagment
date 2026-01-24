@@ -8,6 +8,7 @@ from home.helperServices import *
 from home.models import *
 from home.serilaizers import *
 from django.utils import timezone
+from django.db.models import Sum 
 
 
 # Service to Register employee
@@ -317,32 +318,39 @@ class markNotificationAsRead(APIView):
         return Response({'status':status.HTTP_200_OK,'message':'success'})
 
 
-
-
-
-
-
-
-
-
-        
-
-    
-
-
-
-
-
-        
-
-
-
-    
-    
-
-
-        
-
-
-      
-    
+# Service to generate budget utilization
+class budgetUtilizationReport(APIView):
+    def get(self,request,budgetId):
+        reminingAmount =  0
+        overBudgetAmount = 0
+        healthStatus = "Ok"
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        role = response['data']['role']
+        if role != "Admin":
+            expenseTotal = Expense.objects.filter(relatedBudgetId=budgetId,status="Approved").aggregate(total=Sum("amount"))["total"] or 0
+            budget = Budget.objects.filter(budgetId=budgetId).first()
+            if not budget:
+                return Response({'status':status.HTTP_404_NOT_FOUND,'message':'Budget not found'})   
+            budgetTotal = budget.amountAllocated
+            if expenseTotal>budgetTotal:
+                overBudgetAmount=expenseTotal-budgetTotal
+            else:
+                reminingAmount = budgetTotal-expenseTotal
+            utilization = (expenseTotal / budgetTotal)*100
+            if utilization>100:
+                healthStatus = "EXCEEDED"
+            elif utilization >=80:
+                healthStatus = "WARNING"
+            return Response({'status': status.HTTP_200_OK,'data':{
+                'expenseTotal':expenseTotal,
+                'budgetTotal':budgetTotal,
+                'raminingAmount':reminingAmount,
+                'overBudgetAmount':overBudgetAmount,
+                'utilization':utilization,
+                'healthStatus':healthStatus
+            }})
+        else:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':'permission denied'})    
