@@ -24,4 +24,10 @@ class ExpenseApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExpenseApproval
         fields = '__all__'
+
+# Serializer for Notification
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = '__all__'
     

@@ -84,6 +84,24 @@ class ExpenseApproval(models.Model):
     endDate = models.DateTimeField(null=True,blank=True)
 
 
+# Model for Notification
+class Notification(models.Model):
+    read_status = [
+        ('Unread','Unread'),
+        ('Read','Read')
+    ]
+    notificationId = models.AutoField(primary_key=True)
+    toUserId = models.ForeignKey(User,on_delete=models.PROTECT)
+    type = models.CharField(max_length=20)
+    message = models.TextField()
+    status = models.CharField(max_length=10,choices=read_status,default='Unread')
+    createDate = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return self.type
+    
+
+
+
 
 
 

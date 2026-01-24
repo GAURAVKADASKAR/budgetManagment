@@ -174,7 +174,16 @@ class CreateExpense(APIView):
         expenseApprovalSerializer = ExpenseApprovalSerializer(data=expenseApproval)
         if not expenseApprovalSerializer.is_valid():
             return Response({'status':status.HTTP_400_BAD_REQUEST,'error':expenseApprovalSerializer.errors})
-        expenseApprovalSerializer.save()
+        expenseObj=expenseApprovalSerializer.save()
+        notification = Notification.objects.create(
+            toUserId=expenseObj.assignedUser,
+            type="Expense Approval Pending",
+            message=(
+                f"An expense request of ₹{expense.amount} "
+                f"has been submitted and is awaiting your approval."
+            )
+        )
+        notification.save()
         return Response({'status':status.HTTP_200_OK,'message':'success'})
 
 # Service to update Expense 
@@ -232,9 +241,9 @@ class approveExpense(APIView):
     def patch(self,request,expenseId):
         token = request.headers.get("Authorization").split(" ")[1]
         response = cheack_valid_token(token)
-        userId = response['data']['userId']
         if not response['valid']:
             return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
         try:
             expense = ExpenseApproval.objects.get(expenseId=expenseId,assignedUser=userId)
         except ExpenseApproval.DoesNotExist:
@@ -243,6 +252,12 @@ class approveExpense(APIView):
         expenseObj.status="Approved"
         expenseObj.endDate = timezone.now()
         expenseObj.save()
+        notification = Notification.objects.create(
+            message = f"Your expense request of ₹{expenseObj.amount} has been approved by the manager.",
+            toUserId = expenseObj.submittedByUserId,
+            type = "Approval"
+        )
+        notification.save()
         return Response({'status':status.HTTP_200_OK,'message':'success'})
 
 # Service to Reject expense
@@ -250,9 +265,9 @@ class rejectExpense(APIView):
     def patch(self,request,expenseId):
         token = request.headers.get("Authorization").split(" ")[1]
         response = cheack_valid_token(token)
-        userId = response['data']['userId']
         if not response['valid']:
             return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
         try:
             expense = ExpenseApproval.objects.get(expenseId=expenseId,assignedUser=userId)
         except ExpenseApproval.DoesNotExist:
@@ -261,7 +276,53 @@ class rejectExpense(APIView):
         expenseObj.status="Rejected"
         expenseObj.endDate = timezone.now()
         expenseObj.save()
+        notification = Notification.objects.create(
+            message = f"Your expense request of ₹{expenseObj.amount} has been Rejected by the manager.",
+            toUserId = expenseObj.submittedByUserId,
+            type = "Reject"
+        )
+        notification.save()
         return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+# Service to get notification
+class getnotification(APIView):
+    def get(self,request):
+        notificationId = request.GET.get("notificationId")
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
+        if notificationId:
+            notification = Notification.objects.filter(notificationId=notificationId,toUserId=userId,status="Unread")
+        else:
+            notification = Notification.objects.filter(toUserId=userId,status="Unread")
+        serializer = NotificationSerializer(notification,many=True)
+        return Response({'status':status.HTTP_200_OK,'message':'success','data':serializer.data})
+
+# Service to update notification read status
+class markNotificationAsRead(APIView):
+    def patch(self,request,notificationId):
+        token = request.headers.get("Authorization").split(" ")[1]
+        response = cheack_valid_token(token)
+        if not response['valid']:
+            return Response({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
+        userId = response['data']['userId']
+        try:
+            notification = Notification.objects.get(notificationId=notificationId,toUserId=userId)
+        except Notification.DoesNotExist:
+            return Response({'status':status.HTTP_404_NOT_FOUND,'message':'Invalid request'})
+        notification.status = "Read"
+        notification.save()
+        return Response({'status':status.HTTP_200_OK,'message':'success'})
+
+
+
+
+
+
+
+
 
 
         
