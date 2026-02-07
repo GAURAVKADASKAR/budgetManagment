@@ -99,6 +99,21 @@ class Notification(models.Model):
     def __str__(self):
         return self.type
     
+# Model to log user activity
+class UserLog(models.Model):
+    loginUser = models.ForeignKey(User,on_delete=models.PROTECT,related_name='logUser')
+    email = models.EmailField()
+    action = models.TextField()
+    actionType = models.TextField()
+    message = models.TextField()
+    ipAddress = models.CharField(max_length=100,null=True,blank=True)
+    statusCode = models.CharField(max_length=50)
+    createdDate = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.loginUser} - {self.actionType}"
+    
+
 
 
 

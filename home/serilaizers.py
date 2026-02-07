@@ -31,3 +31,9 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = '__all__'
     
+# Serializer for User log's
+class UserLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserLog
+        fields = '__all__'
+    

@@ -1,19 +1,3 @@
-"""
-URL configuration for budgetManagement project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path
 from home.views import *
@@ -21,18 +5,18 @@ from home.views import *
 urlpatterns = [
     path('employee/register/',employeeRegistration.as_view()),
     path('manager/register/',managerRegistration.as_view()),
-    path('verify/',verifyUser),
+    path('user/verify/',verifyUser),
     path('login/',loginUser.as_view()),
-    path('budget/create/',createBudget.as_view()),
-    path('budget/get/',getBudget.as_view()),
-    path('budget/update/<int:budgetId>/',updateBudget.as_view()),
-    path('budget/delete/<int:budgetId>/',deleteBudget.as_view()),
-    path('expense/create/',CreateExpense.as_view()),
-    path('expense/update/<int:expenseId>/',updateExpense.as_view()),
-    path('expense/get/',getExpense.as_view()),
-    path('expense/approve/<int:expenseId>/',approveExpense.as_view()),
-    path('expense/reject/<int:expenseId>/',rejectExpense.as_view()),
-    path('notification/get/',getnotification.as_view()),
-    path('notification/update/read/<int:notificationId>/',markNotificationAsRead.as_view()),
-    path('report/budget/<int:budgetId>/',budgetUtilizationReport.as_view())
+    path('api/budget/create/',createBudget.as_view()),
+    path('api/budget/get/',getBudget.as_view()),
+    path('api/budget/update/<int:budgetId>/',updateBudget.as_view()),
+    path('api/budget/delete/<int:budgetId>/',deleteBudget.as_view()),
+    path('api/expense/create/',CreateExpense.as_view()),
+    path('api/expense/update/<int:expenseId>/',updateExpense.as_view()),
+    path('api/expense/get/',getExpense.as_view()),
+    path('api/expense/approve/<int:expenseId>/',approveExpense.as_view()),
+    path('api/expense/reject/<int:expenseId>/',rejectExpense.as_view()),
+    path('api/notification/get/',getnotification.as_view()),
+    path('api/notification/update/read/<int:notificationId>/',markNotificationAsRead.as_view()),
+    path('api/report/budget/<int:budgetId>/',budgetUtilizationReport.as_view())
 ]

@@ -15,7 +15,7 @@ def send_verification_mail(email,token):
         f"Hello,\n\n"
         f"Thank you for signing up.\n\n"
         f"To complete your registration, please verify your email address by clicking the link below:\n\n"
-        f"http://127.0.0.1:8000/verify/?token={token}\n\n"
+        f"http://127.0.0.1:8000/user/verify/?token={token}\n\n"
         f"If the link does not open, copy and paste it into your browser.\n\n"
         f"If you did not create this account, you can safely ignore this email.\n\n"
         f"Regards,\n"
@@ -36,6 +36,7 @@ def generate_token(email,role,userId):
         }
         token = jwt.encode(payload,settings.SECRET_KEY,algorithm='HS256')
         return token
+
 
 # Function to verify user token
 def cheack_valid_token(token):

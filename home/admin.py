@@ -1,5 +1,5 @@
 from django.contrib import admin
-from home.models import User,Department,Budget,Expense,ExpenseApproval,Notification
+from home.models import User,Department,Budget,Expense,ExpenseApproval,Notification,UserLog
 
 # Register your models here.
 
@@ -9,3 +9,4 @@ admin.site.register(Budget)
 admin.site.register(Expense)
 admin.site.register(ExpenseApproval)
 admin.site.register(Notification)
+admin.site.register(UserLog)
