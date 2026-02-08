@@ -101,8 +101,8 @@ class Notification(models.Model):
     
 # Model to log user activity
 class UserLog(models.Model):
-    loginUser = models.ForeignKey(User,on_delete=models.PROTECT,related_name='logUser')
-    email = models.EmailField()
+    loginUser = models.ForeignKey(User,on_delete=models.PROTECT,related_name='logUser',null=True,blank=True)
+    email = models.EmailField(null=True,blank=True)
     action = models.TextField()
     actionType = models.TextField()
     message = models.TextField()

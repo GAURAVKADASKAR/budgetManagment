@@ -10,12 +10,31 @@ class AuthLoggingMiddleware:
             return self.get_response(request)
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         token = None
+        ip=request.META.get('REMOTE_ADDR')
         if auth_header.startswith('Bearer '):
             token = auth_header.split()[1]
         if not token:
+            UserLog.objects.create(
+                loginUser = None,
+                email = None,
+                action = request.path,
+                actionType = request.method,
+                message = "Token Missing",
+                ipAddress = ip,
+                statusCode = status.HTTP_401_UNAUTHORIZED
+            )
             return JsonResponse({'status':status.HTTP_401_UNAUTHORIZED,'message':'token missing'})
         response = cheack_valid_token(token)
         if not response['valid']:
+            UserLog.objects.create(
+                loginUser = None,
+                email = None,
+                action = request.path,
+                actionType = request.method,
+                message = "Invalid token",
+                ipAddress = ip,
+                statusCode = status.HTTP_401_UNAUTHORIZED
+            )
             return JsonResponse({'status':status.HTTP_401_UNAUTHORIZED,'error':response['error']})
         email = response["data"]["email"]
         userId = response['data']['userId']
@@ -30,7 +49,7 @@ class AuthLoggingMiddleware:
             action = request.path,
             actionType = request.method,
             message = response.data.get('message'),
-            ipAddress =request.META.get('REMOTE_ADDR'),
+            ipAddress =ip,
             statusCode = response.data.get('status')
         )
         return response
