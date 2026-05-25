@@ -1,6 +1,5 @@
 from django.contrib import admin
 from home.models import User,Department,Budget,Expense,ExpenseApproval,Notification,UserLog
-
 # Register your models here.
 
 admin.site.register(User)
