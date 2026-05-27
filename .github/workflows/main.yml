@@ -47,6 +47,15 @@ jobs:
       - name: Set Variables
         run: |
           echo "TAG_NAME=${{ github.event.inputs.releaseNumber }}" >> $GITHUB_ENV
+          
+      - name: Move releases/UpcomingRelease → releases/${{ inputs.RELEASE_TAG  }}
+        shell: bash
+        run: |
+          if [[ -d releases/UpcomingRelease ]]; then
+            git mv releases/UpcomingRelease "releases/${{ inputs.RELEASE_TAG  }}"
+          else
+            echo "Directory releases/UpcomingRelease does not exist; skipping move."
+          fi
 
       - name: Commit Changes
         run: |
@@ -76,8 +85,6 @@ jobs:
         run: |
 
           API_URL="https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.TAG_NAME }}"
-
-          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG_NAME }}"
 
           RESPONSE=$(curl -s \
             -H "Authorization: Bearer $GH_TOKEN" \
