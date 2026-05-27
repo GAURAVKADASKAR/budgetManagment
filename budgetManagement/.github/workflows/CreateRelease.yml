@@ -1,0 +1,103 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseNumber:
+        description: 'Release number (e.g. v1.2.3)'
+        required: true
+
+      sourceBranch:
+        description: 'Source branch'
+        required: true
+        default: main
+
+      pat:
+        description: 'GitHub Personal Access Token'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.sourceBranch }}
+          token: ${{ github.event.inputs.pat }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Set Variables
+        run: |
+          echo "TAG_NAME=${{ github.event.inputs.releaseNumber }}" >> $GITHUB_ENV
+
+      - name: Validate Tag Format
+        run: |
+          if [[ ! "${{ github.event.inputs.releaseNumber }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format."
+            exit 1
+          fi
+
+      - name: Generate RELEASE_NOTES.md from GitHub API
+        env:
+          GH_TOKEN: ${{ github.event.inputs.pat }}
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/releases/generate-notes \
+            -d "{
+              \"tag_name\": \"${{ env.TAG_NAME }}\",
+              \"target_commitish\": \"${{ github.event.inputs.sourceBranch }}\"
+            }")
+
+          NOTES=$(echo "$RESPONSE" | jq -r '.body')
+
+          FILE=RELEASE_NOTES.md
+
+          echo "## ${{ github.repository }} (${{ env.TAG_NAME }})" > $FILE
+          echo "" >> $FILE
+
+          echo "- **DiffUrl** : NA" >> $FILE
+          echo "" >> $FILE
+
+          echo "### Release Notes" >> $FILE
+          echo "$NOTES" >> $FILE
+          echo "" >> $FILE
+
+          echo "---" >> $FILE
+
+          echo "Generated RELEASE_NOTES.md:"
+          cat RELEASE_NOTES.md
+
+      - name: Commit Release Notes
+        run: |
+          git add RELEASE_NOTES.md
+
+          git commit -m "Add release notes for ${{ env.TAG_NAME }}" || echo "No changes to commit"
+
+      - name: Push Changes
+        run: |
+          git push origin HEAD:${{ github.event.inputs.sourceBranch }}
+
+      - name: Create Git Tag
+        run: |
+          git tag ${{ env.TAG_NAME }}
+          git push origin ${{ env.TAG_NAME }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ github.event.inputs.pat }}
