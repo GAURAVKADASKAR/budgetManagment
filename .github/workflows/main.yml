@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       releaseNumber:
-        description: 'Release number (e.g. v1.2.3)'
+        description: 'Release number (e.g. v1.0.2)'
         required: true
 
       sourceBranch:
         description: 'Source branch'
         required: true
-        default: main
+        default: master
 
       pat:
         description: 'GitHub Personal Access Token'
@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -40,24 +41,38 @@ jobs:
         run: |
           echo "TAG_NAME=${{ github.event.inputs.releaseNumber }}" >> $GITHUB_ENV
 
-      - name: Validate Tag Format
+      - name: Validate Version Format
         run: |
           if [[ ! "${{ github.event.inputs.releaseNumber }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version format."
+            echo "Invalid version format"
             exit 1
           fi
 
-      - name: Generate RELEASE_NOTES.md from GitHub API
+      - name: Push Latest Commits
+        run: |
+          git push origin HEAD:${{ github.event.inputs.sourceBranch }}
+
+      - name: Find Previous Tag
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
+
+          echo "Previous tag is: $PREVIOUS_TAG"
+
+      - name: Generate RELEASE_NOTES.md
         env:
           GH_TOKEN: ${{ github.event.inputs.pat }}
         run: |
+
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/releases/generate-notes \
             -d "{
               \"tag_name\": \"${{ env.TAG_NAME }}\",
-              \"target_commitish\": \"${{ github.event.inputs.sourceBranch }}\"
+              \"target_commitish\": \"${{ github.event.inputs.sourceBranch }}\",
+              \"previous_tag_name\": \"${{ env.PREVIOUS_TAG }}\"
             }")
 
           NOTES=$(echo "$RESPONSE" | jq -r '.body')
@@ -67,7 +82,7 @@ jobs:
           echo "## ${{ github.repository }} (${{ env.TAG_NAME }})" > $FILE
           echo "" >> $FILE
 
-          echo "- **DiffUrl** : NA" >> $FILE
+          echo "- **DiffUrl** : https://github.com/${{ github.repository }}/compare/${{ env.PREVIOUS_TAG }}...${{ env.TAG_NAME }}" >> $FILE
           echo "" >> $FILE
 
           echo "### Release Notes" >> $FILE
@@ -76,22 +91,23 @@ jobs:
 
           echo "---" >> $FILE
 
-          echo "Generated RELEASE_NOTES.md:"
+          echo "Generated RELEASE_NOTES.md"
           cat RELEASE_NOTES.md
 
-      - name: Commit Release Notes
+      - name: Commit RELEASE_NOTES.md
         run: |
           git add RELEASE_NOTES.md
 
           git commit -m "Add release notes for ${{ env.TAG_NAME }}" || echo "No changes to commit"
 
-      - name: Push Changes
+      - name: Push Release Notes
         run: |
           git push origin HEAD:${{ github.event.inputs.sourceBranch }}
 
       - name: Create Git Tag
         run: |
           git tag ${{ env.TAG_NAME }}
+
           git push origin ${{ env.TAG_NAME }}
 
       - name: Create GitHub Release
