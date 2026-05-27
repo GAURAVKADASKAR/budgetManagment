@@ -94,15 +94,19 @@ jobs:
           BODY=$(echo "$RESPONSE" | jq -r '.body')
 
           FILE=RELEASE_NOTES.md
-
-          echo "## [${{ env.TAG_NAME }}](${RELEASE_URL})" > $FILE
-          echo "" >> $FILE
-
-          echo "$BODY" >> $FILE
-          echo "" >> $FILE
-
-          echo "---" >> $FILE
-
+          TEMP_FILE=temp_release_notes.md
+          { 
+            echo "## [${{ env.TAG_NAME }}](${RELEASE_URL})" 
+            echo "" 
+            echo "$BODY"
+            echo "" 
+            echo "---" 
+            echo "" 
+          } > $TEMP_FILE
+          if [ -f "$FILE" ]; then 
+            cat "$FILE" >> $TEMP_FILE 
+          fi
+          mv $TEMP_FILE $FILE
           echo "Generated RELEASE_NOTES.md"
           cat RELEASE_NOTES.md
 
