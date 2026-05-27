@@ -1,9 +1,9 @@
-## [v1.0.5](https://github.com/GAURAVKADASKAR/budgetManagment/releases/tag/v1.0.5)
+## [v1.0.6]()
 
 ## What's Changed
-* changes by @GAURAVKADASKAR in https://github.com/GAURAVKADASKAR/budgetManagment/pull/2
+* Changes in workFlow to rename the folders by @GAURAVKADASKAR in https://github.com/GAURAVKADASKAR/budgetManagment/pull/3
 
 
-**Full Changelog**: https://github.com/GAURAVKADASKAR/budgetManagment/compare/v1.0.4...v1.0.5
+**Full Changelog**: https://github.com/GAURAVKADASKAR/budgetManagment/compare/v1.0.5...v1.0.6
 
 ---
