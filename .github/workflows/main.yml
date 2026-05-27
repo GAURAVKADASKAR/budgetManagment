@@ -47,12 +47,12 @@ jobs:
       - name: Set Variables
         run: |
           echo "TAG_NAME=${{ github.event.inputs.releaseNumber }}" >> $GITHUB_ENV
-          
-      - name: Move releases/UpcomingRelease → releases/${{ inputs.RELEASE_TAG  }}
+
+      - name: Move releases/UpcomingRelease → releases/${{ env.TAG_NAME  }}
         shell: bash
         run: |
           if [[ -d releases/UpcomingRelease ]]; then
-            git mv releases/UpcomingRelease "releases/${{ inputs.RELEASE_TAG  }}"
+            git mv releases/UpcomingRelease "releases/${{ env.TAG_NAME  }}"
           else
             echo "Directory releases/UpcomingRelease does not exist; skipping move."
           fi
