@@ -1,10 +1,10 @@
-name: Create Release
+name: Create New Release
 
 on:
   workflow_dispatch:
     inputs:
       releaseNumber:
-        description: 'Release number (e.g. v1.0.2)'
+        description: 'Release number (e.g. v1.2.3)'
         required: true
 
       sourceBranch:
@@ -13,7 +13,7 @@ on:
         default: master
 
       pat:
-        description: 'GitHub Personal Access Token'
+        description: 'GitHub PAT'
         required: true
 
 permissions:
@@ -25,12 +25,19 @@ jobs:
 
     steps:
 
-      - name: Checkout Repository
+      - name: Checkout source branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.sourceBranch }}
           token: ${{ github.event.inputs.pat }}
           fetch-depth: 0
+
+      - name: Validate releaseNumber format
+        run: |
+          if [[ ! "${{ github.event.inputs.releaseNumber }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format"
+            exit 1
+          fi
 
       - name: Configure Git
         run: |
@@ -41,52 +48,50 @@ jobs:
         run: |
           echo "TAG_NAME=${{ github.event.inputs.releaseNumber }}" >> $GITHUB_ENV
 
-      - name: Validate Version Format
+      - name: Commit Changes
         run: |
-          if [[ ! "${{ github.event.inputs.releaseNumber }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version format"
-            exit 1
-          fi
+          git add -A
 
-      - name: Push Latest Commits
-        run: |
+          git commit -m "Prepare release ${{ env.TAG_NAME }}" || echo "No changes"
+
+          git pull --rebase origin "${{ github.event.inputs.sourceBranch }}"
+
           git push origin HEAD:${{ github.event.inputs.sourceBranch }}
 
-      - name: Find Previous Tag
-        run: |
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | head -n 1)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          target_commitish: ${{ github.event.inputs.sourceBranch }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.event.inputs.pat }}
 
-          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
+      - name: Wait for GitHub Release
+        run: sleep 5
 
-          echo "Previous tag is: $PREVIOUS_TAG"
-
-      - name: Generate RELEASE_NOTES.md
+      - name: Fetch Release Notes using GitHub API
         env:
           GH_TOKEN: ${{ github.event.inputs.pat }}
         run: |
 
-          RESPONSE=$(curl -s -X POST \
+          API_URL="https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.TAG_NAME }}"
+
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG_NAME }}"
+
+          RESPONSE=$(curl -s \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/releases/generate-notes \
-            -d "{
-              \"tag_name\": \"${{ env.TAG_NAME }}\",
-              \"target_commitish\": \"${{ github.event.inputs.sourceBranch }}\",
-              \"previous_tag_name\": \"${{ env.PREVIOUS_TAG }}\"
-            }")
+            "$API_URL")
 
-          NOTES=$(echo "$RESPONSE" | jq -r '.body')
+          BODY=$(echo "$RESPONSE" | jq -r '.body')
 
           FILE=RELEASE_NOTES.md
 
-          echo "## ${{ github.repository }} (${{ env.TAG_NAME }})" > $FILE
+          echo "## [${{ env.TAG_NAME }}](${RELEASE_URL})" > $FILE
           echo "" >> $FILE
 
-          echo "- **DiffUrl** : https://github.com/${{ github.repository }}/compare/${{ env.PREVIOUS_TAG }}...${{ env.TAG_NAME }}" >> $FILE
-          echo "" >> $FILE
-
-          echo "### Release Notes" >> $FILE
-          echo "$NOTES" >> $FILE
+          echo "$BODY" >> $FILE
           echo "" >> $FILE
 
           echo "---" >> $FILE
@@ -98,22 +103,6 @@ jobs:
         run: |
           git add RELEASE_NOTES.md
 
-          git commit -m "Add release notes for ${{ env.TAG_NAME }}" || echo "No changes to commit"
+          git commit -m "Add release notes for ${{ env.TAG_NAME }}" || echo "No changes"
 
-      - name: Push Release Notes
-        run: |
           git push origin HEAD:${{ github.event.inputs.sourceBranch }}
-
-      - name: Create Git Tag
-        run: |
-          git tag ${{ env.TAG_NAME }}
-
-          git push origin ${{ env.TAG_NAME }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          body_path: RELEASE_NOTES.md
-        env:
-          GITHUB_TOKEN: ${{ github.event.inputs.pat }}
