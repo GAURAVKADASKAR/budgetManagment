@@ -1,14 +1,9 @@
-## GAURAVKADASKAR/budgetManagment (v1.0.4)
+## [v1.0.5](https://github.com/GAURAVKADASKAR/budgetManagment/releases/tag/v1.0.5)
 
-- **DiffUrl** : https://github.com/GAURAVKADASKAR/budgetManagment/compare/v1.0.3...v1.0.4
-
-### Release Notes
 ## What's Changed
-* test changes for release by @GAURAVKADASKAR in https://github.com/GAURAVKADASKAR/budgetManagment/pull/1
+* changes by @GAURAVKADASKAR in https://github.com/GAURAVKADASKAR/budgetManagment/pull/2
 
-## New Contributors
-* @GAURAVKADASKAR made their first contribution in https://github.com/GAURAVKADASKAR/budgetManagment/pull/1
 
-**Full Changelog**: https://github.com/GAURAVKADASKAR/budgetManagment/compare/v1.0.3...v1.0.4
+**Full Changelog**: https://github.com/GAURAVKADASKAR/budgetManagment/compare/v1.0.4...v1.0.5
 
 ---
