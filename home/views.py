@@ -345,5 +345,6 @@ class budgetUtilizationReport(APIView):
             'message':f'Report for budget : {budgetId} is succefully created'})
         else:
             return Response({'status':status.HTTP_401_UNAUTHORIZED,'message':'permission denied'})    
-    
+class test:
+    pass
 
