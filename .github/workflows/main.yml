@@ -59,7 +59,7 @@ jobs:
 
       - name: Commit Changes
         run: |
-          git add -A
+          git add releases
 
           git commit -m "Prepare release ${{ env.TAG_NAME }}" || echo "No changes"
 
